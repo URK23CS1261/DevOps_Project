@@ -1,0 +1,5 @@
+- name: Deploy Athena to Kubernetes
+  hosts: localhost
+  tasks:
+    - name: Apply Kubernetes configs
+      command: kubectl apply -f ../k8s/
