@@ -1,0 +1,143 @@
+if (process.env.NODE_ENV !== "production") {
+  await import("./utils/loadEnv.js");
+}
+import express from "express";
+import cookieParser from "cookie-parser";
+import rateLimit from "express-rate-limit";
+import cors from "cors";
+import http from "http";
+
+// Routers
+import authRoutes from "./routes/authRoutes.js";
+import userRoutes from "./routes/userRoutes.js";
+import adminRoutes from "./routes/adminRoutes.js";
+import sessionRoutes from "./routes/sessionRoutes.js";
+import generalRoutes from "./routes/generalRoutes.js";
+import streakRoutes from "./routes/streakRoutes.js";
+import notesRoutes from "./routes/notesRoute.js";
+import plannerRoutes from "./routes/plannerRoute.js";
+import goalRoutes from "./routes/goalRoutes.js";
+import taskRoutes from "./routes/taskRoutes.js";
+
+// Database instance setup
+import { connectDB, closeDB } from "./config/db.js";
+import { initSocket } from "./config/socket.js";
+import {
+  startUserChangeStream,
+  stopChangeStream,
+} from "./services/changeStream.js";
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100, // strict
+  message: {
+    success: false,
+    message: "Too many auth attempts. Try again later.",
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 200, // normal usage
+  message: {
+    success: false,
+    message: "Too many requests. Please slow down.",
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const heavyLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 1000, // very relaxed 
+  message: {
+    success: false,
+    message: "Too many session updates.",
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// SETUP for express instance and adding required in-built middleware (express.json() => JSON parser)
+const app = express();
+// app.use(limiter);
+app.use(
+  cors({
+    origin: ["http://localhost:5173", "http://localhost:3000"],
+    credentials: true,
+  }),
+);
+app.use(express.json());
+app.use(cookieParser());
+
+// # Routings
+// app.get('/', (req, res) => {
+//     res.send("hello")
+// })
+
+app.get("/health", (req, res) => {
+  res.json({
+    success: true,
+    message: "Athena API is running!",
+    timestamp: new Date().toISOString(),
+  });
+});
+
+// Routing to auth for login and logout
+app.use("/api/auth", authLimiter, authRoutes);
+
+app.use("/api/session", heavyLimiter, sessionRoutes);
+
+app.use("/api/user", apiLimiter, userRoutes);
+app.use("/api/admin", apiLimiter, adminRoutes);
+app.use("/api/general", apiLimiter, generalRoutes);
+app.use("/api/streak", apiLimiter, streakRoutes);
+app.use("/api/notes", apiLimiter, notesRoutes);
+app.use("/api/goal", apiLimiter, goalRoutes);
+app.use("/api/task", apiLimiter, taskRoutes);
+app.use("/api/planner", apiLimiter, plannerRoutes);
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error("Error:", err.stack);
+  res.status(500).json({
+    success: false,
+    message:
+      process.env.NODE_ENV === "production"
+        ? "Something went wrong!"
+        : err.message,
+  });
+});
+// 404 handler
+// app.use('*', (req, res) => {
+//     res.status(404).json({
+//         success: false,
+//         message: `Route ${req.originalUrl} not found`
+//     });
+// });
+
+const PORT = process.env.PORT || 5000;
+const startServer = async () => {
+  // connecting database
+  await connectDB();
+  const server = http.createServer(app);
+  initSocket(server);
+
+  startUserChangeStream();
+
+  server.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+    console.log(`Athena Backend ready!`);
+    console.log(`Environment: ${process.env.NODE_ENV || "development"}`);
+  });
+  process.on("SIGINT", async () => {
+    console.log("Shutting down...");
+    await stopChangeStream();
+    await closeDB();
+    process.exit(0);
+  });
+};
+
+startServer();
