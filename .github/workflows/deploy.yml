@@ -7,22 +7,33 @@ on:
 
 jobs:
   build-deploy:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      - name: Verify Minikube
+        run: |
+          minikube status || minikube start --driver=docker
+          kubectl config use-context minikube
+          kubectl version --client
+
       - name: Build backend image
-        run: docker build -t athena-backend ./backend
+        run: docker build -t athena-backend:latest ./backend
 
       - name: Build frontend image
-        run: docker build -t athena-frontend ./frontend
+        run: docker build -t athena-frontend:latest ./frontend
 
-      - name: Set up kubectl
-        uses: azure/setup-kubectl@v3
-
-      - name: Validate Kubernetes configs
+      - name: Load images into Minikube
         run: |
-          echo "Validating Kubernetes YAML files..."
-          ls k8s/
+          minikube image load athena-backend:latest
+          minikube image load athena-frontend:latest
+
+      - name: Deploy Kubernetes manifests
+        run: kubectl apply -f k8s/
+
+      - name: Wait for rollout
+        run: |
+          kubectl rollout status deployment/backend
+          kubectl rollout status deployment/frontend
