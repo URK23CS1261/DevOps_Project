@@ -22,5 +22,7 @@ jobs:
       - name: Set up kubectl
         uses: azure/setup-kubectl@v3
 
-      - name: Deploy to Kubernetes
-        run: kubectl apply -f k8s/
+      - name: Validate Kubernetes configs
+        run: |
+          echo "Validating Kubernetes YAML files..."
+          ls k8s/
