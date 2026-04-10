@@ -63,9 +63,20 @@ const heavyLimiter = rateLimit({
 // SETUP for express instance and adding required in-built middleware (express.json() => JSON parser)
 const app = express();
 // app.use(limiter);
+const allowedOrigins = [
+  "http://localhost:5173",
+  "http://localhost:3000",
+];
+
 app.use(
   cors({
-    origin: ["http://localhost:5173", "http://localhost:3000"],
+    origin: function (origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(null, true); // allow via proxy
+      }
+    },
     credentials: true,
   }),
 );

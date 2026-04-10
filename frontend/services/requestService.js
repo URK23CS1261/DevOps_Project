@@ -1,12 +1,10 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL;
-
 export default class RequestService {
   async request(
     endpoint,
     options = {},
     retryOptions = { retries: 3, retryDelay: 500 }
   ) {
-    const url = `${API_BASE_URL}${endpoint}`;
+    const url = `$${endpoint}`;
 
     const config = {
       headers: {

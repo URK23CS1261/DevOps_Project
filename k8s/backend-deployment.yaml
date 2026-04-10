@@ -25,3 +25,17 @@ spec:
           env:
             - name: MONGO_URI
               value: mongodb://mongodb:27017/athena
+
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 5000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 5000
+            initialDelaySeconds: 5
+            periodSeconds: 5
