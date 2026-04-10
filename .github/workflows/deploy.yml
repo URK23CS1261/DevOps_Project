@@ -1,0 +1,26 @@
+name: Athena CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Build backend image
+        run: docker build -t athena-backend ./backend
+
+      - name: Build frontend image
+        run: docker build -t athena-frontend ./frontend
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v3
+
+      - name: Deploy to Kubernetes
+        run: kubectl apply -f k8s/
