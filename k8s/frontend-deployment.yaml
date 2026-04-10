@@ -20,4 +20,4 @@ spec:
           image: athena-frontend
           imagePullPolicy: IfNotPresent
           ports:
-            - containerPort: 5173
+            - containerPort: 80

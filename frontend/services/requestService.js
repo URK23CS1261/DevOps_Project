@@ -4,7 +4,7 @@ export default class RequestService {
     options = {},
     retryOptions = { retries: 3, retryDelay: 500 }
   ) {
-    const url = `$${endpoint}`;
+    const url = `/api${endpoint}`;
 
     const config = {
       headers: {
