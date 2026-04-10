@@ -13,11 +13,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Verify Minikube
+      - name: Ensure Minikube is running
         run: |
-          minikube status || minikube start --driver=docker
-          kubectl config use-context minikube
-          kubectl version --client
+          minikube status
+          if ($LASTEXITCODE -ne 0) {
+            minikube start --driver=docker
+          }
 
       - name: Build backend image
         run: docker build -t athena-backend:latest ./backend
